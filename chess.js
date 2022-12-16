@@ -58,6 +58,8 @@ class Piece {
   }
 
   insertMove(i, j, board, moves) {
+    if (i < 0 || i >= board.length || j < 0 || j >= board.length)
+      return false;
     if (board[i][j].piece == null) {
       moves.push(board[i][j]);
       return true;
@@ -76,7 +78,7 @@ class Pawn extends Piece {
   getMoves(i, j, board) {
     var moves = [];
     if (this.color == 'white') {
-      if (i == 1)
+      if (i == 1 && board[i+1][j].piece == null)
         moves.push(board[i+2][j]);
       if (board[i+1][j].piece == null)
         moves.push(board[i+1][j]);
@@ -86,7 +88,7 @@ class Pawn extends Piece {
         moves.push(board[i+1][j-1]);
     }
     else {
-      if (i == 6)
+      if (i == 6 && board[i-1][j].piece == null)
         moves.push(board[i-2][j]);
       if (board[i-1][j].piece == null)
         moves.push(board[i-1][j]);
@@ -230,30 +232,14 @@ class Knight extends Piece {
 
   getMoves(i, j, board) {
     var moves = [];
-    if (i+2 < board.length) {
-      if (j+1 < board.length)
-        this.insertMove(i+2, j+1, board, moves);
-      if (j-1 >= 0)
-        this.insertMove(i+2, j-1, board, moves);
-    }
-    if (i+1 < board.length) {
-      if (j+2 < board.length)
-        this.insertMove(i+1, j+2, board, moves);
-      if (j-2 >= 0)
-        this.insertMove(i+1, j-2, board, moves);
-    }
-    if (i-1 >= 0) {
-      if (j+2 < board.length)
-        this.insertMove(i-1, j+2, board, moves);
-      if (j-2 >= 0)
-        this.insertMove(i-1, j-2, board, moves);
-    }
-    if (i-2 >= 0) {
-      if (j+1 < board.length)
-        this.insertMove(i-2, j+1, board, moves);
-      if (j-1 >= 0)
-        this.insertMove(i-2, j-1, board, moves);
-    }
+    this.insertMove(i+2, j+1, board, moves);
+    this.insertMove(i+2, j-1, board, moves);
+    this.insertMove(i+1, j+2, board, moves);
+    this.insertMove(i+1, j-2, board, moves);
+    this.insertMove(i-1, j+2, board, moves);
+    this.insertMove(i-1, j-2, board, moves);
+    this.insertMove(i-2, j+1, board, moves);
+    this.insertMove(i-2, j-1, board, moves);
     return moves;
   }
 }
@@ -276,8 +262,7 @@ class King extends Piece {
     var moves = [];
     for (var y=-1; y<=1; y++)
       for (var x=-1; x<=1; x++)
-        if (0 <= i+y < board.length && 0 <= j+x < board.length)
-          this.insertMove(i+y, j+x, board, moves);
+        this.insertMove(i+y, j+x, board, moves);
     return moves;
   }
 }
@@ -374,14 +359,12 @@ function setupTile(i, j, s, board) {
 }
 
 board = new Board();
-var setupString = 'rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R';
+var setupString = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR';
 var tmp = setupString.split("/");
-console.log(tmp);
 for (var i=0; i<tmp.length; i++) {
   var j = 0;
   for (var k=0; k<tmp[0].length; k++) {
     if (!Number.isNaN(parseInt(tmp[i][k]))) {
-      console.log('asd');
       j += parseInt(tmp[i][k]);
       continue;
     }
@@ -389,6 +372,5 @@ for (var i=0; i<tmp.length; i++) {
     j += 1;
   }
 }
-console.log(board.board);
 board.update();
 c.addEventListener('click', board.selectTile.bind(board));
