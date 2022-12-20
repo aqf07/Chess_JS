@@ -14,6 +14,7 @@ class Tile {
     else
       this.color = 0;
     this.piece = piece;
+    this.img = new Image();
   }
 
   clear() {
@@ -31,8 +32,10 @@ class Tile {
     ctx.fillStyle = this.colors[this.color];
     ctx.fillRect(100*this.x, 100*this.y, 100, 100);
     if (this.piece != null) {
-      ctx.fillStyle = this.piece.color;
-      ctx.fillText(this.piece.getStr(), 100*this.x+40, 100*this.y+60);
+      this.img.onload = function(){
+        ctx.drawImage(this.img, 100*this.x, 100*this.y, 100, 100);
+      }.bind(this);
+      this.img.src = this.piece.getStr();
     }
   }
 
@@ -78,7 +81,7 @@ class Pawn extends Piece {
   getMoves(i, j, board) {
     var moves = [];
     if (this.color == 'white') {
-      if (i == 1 && board[i+1][j].piece == null)
+      if (i == 1 && board[i+1][j].piece == null && board[i+2][j].piece == null)
         moves.push(board[i+2][j]);
       if (board[i+1][j].piece == null)
         moves.push(board[i+1][j]);
@@ -88,7 +91,7 @@ class Pawn extends Piece {
         moves.push(board[i+1][j-1]);
     }
     else {
-      if (i == 6 && board[i-1][j].piece == null)
+      if (i == 6 && board[i-1][j].piece == null && board[i-2][j].piece == null)
         moves.push(board[i-2][j]);
       if (board[i-1][j].piece == null)
         moves.push(board[i-1][j]);
@@ -105,7 +108,10 @@ class Pawn extends Piece {
   }
 
   getStr() {
-    return 'Pawn';
+    if (this.color == 'white')
+      return 'chess_pieces/Chess_plt60.png';
+    else
+      return 'chess_pieces/Chess_pdt60.png';
   }
 }
 
@@ -115,7 +121,10 @@ class Queen extends Piece {
   }
 
   getStr() {
-    return 'Queen';
+    if (this.color == 'white')
+      return 'chess_pieces/Chess_qlt60.png';
+    else
+      return 'chess_pieces/Chess_qdt60.png';
   }
 
   getMoves(i, j, board) {
@@ -158,7 +167,10 @@ class Bishop extends Piece {
   }
 
   getStr() {
-    return 'Bishop';
+    if (this.color == 'white')
+      return 'chess_pieces/Chess_blt60.png';
+    else
+      return 'chess_pieces/Chess_bdt60.png';
   }
 
   getMoves(i, j, board) {
@@ -191,7 +203,10 @@ class Rook extends Piece {
   }
 
   getStr() {
-    return 'Rook';
+    if (this.color == 'white')
+      return 'chess_pieces/Chess_rlt60.png';
+    else
+      return 'chess_pieces/Chess_rdt60.png';
   }
 
   getMoves(i, j, board) {
@@ -227,7 +242,10 @@ class Knight extends Piece {
   }
 
   getStr() {
-    return "Knight"
+    if (this.color == 'white')
+      return 'chess_pieces/Chess_nlt60.png';
+    else
+      return 'chess_pieces/Chess_ndt60.png';
   }
 
   getMoves(i, j, board) {
@@ -251,7 +269,10 @@ class King extends Piece {
   }
 
   getStr() {
-    return "King";
+    if (this.color == 'white')
+      return 'chess_pieces/Chess_klt60.png';
+    else
+      return 'chess_pieces/Chess_kdt60.png';
   }
 
   move() {
@@ -294,7 +315,8 @@ class Board {
     t1.piece.move();
     t2.piece = t1.piece;
     t1.piece = null;
-    this.update();
+    t1.draw();
+    t2.draw();
   }
 
   selectTile(e) {
@@ -365,6 +387,7 @@ for (var i=0; i<tmp.length; i++) {
   var j = 0;
   for (var k=0; k<tmp[0].length; k++) {
     if (!Number.isNaN(parseInt(tmp[i][k]))) {
+      console.log(parseInt(tmp[i][k]));
       j += parseInt(tmp[i][k]);
       continue;
     }
