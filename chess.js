@@ -48,10 +48,24 @@ class Tile {
   }
 
   showMove() {
-    ctx.beginPath();
     ctx.fillStyle = this.dotColors[this.color];
-    ctx.arc(100*this.x+50, 100*this.y+50, 15, 0, 2*Math.PI);
-    ctx.fill();
+    if (this.piece == null) {
+      ctx.beginPath();
+      ctx.arc(100*this.x+50, 100*this.y+50, 15, 0, 2*Math.PI);
+      ctx.fill();
+    }
+    else {
+      const key = [1, -1];
+      for (var i=0; i<=1; i++)
+        for (var j=0; j<=1; j++) {
+          ctx.beginPath();
+          ctx.moveTo(100*(this.x+i), 100*(this.y+j));
+          ctx.lineTo(100*(this.x+i)+(30*key[i]), 100*(this.y+j));
+          ctx.lineTo(100*(this.x+i), 100*(this.y+j)+(30*key[j]));
+          ctx.fill();
+        }
+
+    }
   }
 }
 
@@ -290,7 +304,7 @@ class King extends Piece {
 
 
 class Board {
-  constructor() {
+  constructor(setup) {
     this.board = new Array(8);
     for (var i=0; i<this.board.length; i++) {
       this.board[i] = new Array(8);
@@ -301,6 +315,9 @@ class Board {
     }
     this.focused = null;
     this.currentMoves = [];
+    this.whitePieces = new Set();
+    this.blackPieces = new Set();
+    this.setupBoard(setup);
   }
 
   update() {
@@ -313,6 +330,18 @@ class Board {
 
   move(t1, t2) {
     t1.piece.move();
+    if (t1.piece.color == 'white') {
+      this.whitePieces.delete(t1);
+      this.whitePieces.add(t2);
+      if (t2.piece != null)
+        this.blackPieces.delete(t2);
+    }
+    else {
+      this.blackPieces.delete(t1);
+      this.blackPieces.add(t2);
+      if (t2.piece != null)
+        this.whitePieces.delete(t2);
+    }
     t2.piece = t1.piece;
     t1.piece = null;
     t1.draw();
@@ -351,38 +380,39 @@ class Board {
       }
     }
   }
-}
 
-function setupTile(i, j, s, board) {
-  if (s == 'p')
-    board[i][j].piece = new Pawn('black');
-  else if (s == 'P')
-    board[i][j].piece = new Pawn('white');
-  else if (s == 'n')
-    board[i][j].piece = new Knight('black');
-  else if (s == 'N')
-    board[i][j].piece = new Knight('white');
-  else if (s == 'b')
-    board[i][j].piece = new Bishop('black');
-  else if (s=='B')
-    board[i][j].piece = new Bishop('white');
-  else if (s == 'r')
-    board[i][j].piece = new Rook('black');
-  else if (s == 'R')
-    board[i][j].piece = new Rook('white');
-  else if (s == 'q')
-    board[i][j].piece = new Queen('black');
-  else if (s == 'Q')
-    board[i][j].piece = new Queen('white')
-  else if (s == 'k')
-    board[i][j].piece = new King('black')
-  else if (s == 'K')
-    board[i][j].piece = new King('white');
-}
+  setupTile(i, j, s) {
+    if (s == s.toUpperCase())
+      this.whitePieces.add(this.board[i][j]);
+    else
+      this.blackPieces.add(this.board[i][j]);
+    if (s == 'p')
+      this.board[i][j].piece = new Pawn('black');
+    else if (s == 'P')
+      this.board[i][j].piece = new Pawn('white');
+    else if (s == 'n')
+      this.board[i][j].piece = new Knight('black');
+    else if (s == 'N')
+      this.board[i][j].piece = new Knight('white');
+    else if (s == 'b')
+      this.board[i][j].piece = new Bishop('black');
+    else if (s=='B')
+      this.board[i][j].piece = new Bishop('white');
+    else if (s == 'r')
+      this.board[i][j].piece = new Rook('black');
+    else if (s == 'R')
+      this.board[i][j].piece = new Rook('white');
+    else if (s == 'q')
+      this.board[i][j].piece = new Queen('black');
+    else if (s == 'Q')
+      this.board[i][j].piece = new Queen('white')
+    else if (s == 'k')
+      this.board[i][j].piece = new King('black')
+    else if (s == 'K')
+      this.board[i][j].piece = new King('white');
+  }
 
-class Game {
-  constructor(setup) {
-    this.board = new Board();
+  setupBoard(setup) {
     var tmp = setup.split("/");
     for (var i=0; i<tmp.length; i++) {
       var j = 0;
@@ -391,12 +421,18 @@ class Game {
           j += parseInt(tmp[i][k]);
           continue;
         }
-        setupTile(7-i, j, tmp[i][k], this.board.board);
+        this.setupTile(7-i, j, tmp[i][k]);
         j += 1;
       }
     }
-    this.board.update();
-    c.addEventListener('click', this.board.selectTile.bind(this.board));
+    this.update();
+    c.addEventListener('click', this.selectTile.bind(this));
+  }
+}
+
+class Game {
+  constructor(setup) {
+    this.board = new Board(setup);
   }
 }
 
