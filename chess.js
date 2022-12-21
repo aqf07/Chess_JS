@@ -109,9 +109,9 @@ class Pawn extends Piece {
 
   getStr() {
     if (this.color == 'white')
-      return 'chess_pieces/Chess_plt60.png';
+      return 'chess_pieces/wP.svg';
     else
-      return 'chess_pieces/Chess_pdt60.png';
+      return 'chess_pieces/bP.svg';
   }
 }
 
@@ -122,9 +122,9 @@ class Queen extends Piece {
 
   getStr() {
     if (this.color == 'white')
-      return 'chess_pieces/Chess_qlt60.png';
+      return 'chess_pieces/wQ.svg';
     else
-      return 'chess_pieces/Chess_qdt60.png';
+      return 'chess_pieces/bQ.svg';
   }
 
   getMoves(i, j, board) {
@@ -168,9 +168,9 @@ class Bishop extends Piece {
 
   getStr() {
     if (this.color == 'white')
-      return 'chess_pieces/Chess_blt60.png';
+      return 'chess_pieces/wB.svg';
     else
-      return 'chess_pieces/Chess_bdt60.png';
+      return 'chess_pieces/bB.svg';
   }
 
   getMoves(i, j, board) {
@@ -204,9 +204,9 @@ class Rook extends Piece {
 
   getStr() {
     if (this.color == 'white')
-      return 'chess_pieces/Chess_rlt60.png';
+      return 'chess_pieces/wR.svg';
     else
-      return 'chess_pieces/Chess_rdt60.png';
+      return 'chess_pieces/bR.svg';
   }
 
   getMoves(i, j, board) {
@@ -243,9 +243,9 @@ class Knight extends Piece {
 
   getStr() {
     if (this.color == 'white')
-      return 'chess_pieces/Chess_nlt60.png';
+      return 'chess_pieces/wN.svg';
     else
-      return 'chess_pieces/Chess_ndt60.png';
+      return 'chess_pieces/bN.svg';
   }
 
   getMoves(i, j, board) {
@@ -270,9 +270,9 @@ class King extends Piece {
 
   getStr() {
     if (this.color == 'white')
-      return 'chess_pieces/Chess_klt60.png';
+      return 'chess_pieces/wK.svg';
     else
-      return 'chess_pieces/Chess_kdt60.png';
+      return 'chess_pieces/bK.svg';
   }
 
   move() {
@@ -380,20 +380,25 @@ function setupTile(i, j, s, board) {
     board[i][j].piece = new King('white');
 }
 
-board = new Board();
-var setupString = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR';
-var tmp = setupString.split("/");
-for (var i=0; i<tmp.length; i++) {
-  var j = 0;
-  for (var k=0; k<tmp[0].length; k++) {
-    if (!Number.isNaN(parseInt(tmp[i][k]))) {
-      console.log(parseInt(tmp[i][k]));
-      j += parseInt(tmp[i][k]);
-      continue;
+class Game {
+  constructor(setup) {
+    this.board = new Board();
+    var tmp = setup.split("/");
+    for (var i=0; i<tmp.length; i++) {
+      var j = 0;
+      for (var k=0; k<tmp[i].length; k++) {
+        if (!Number.isNaN(parseInt(tmp[i][k]))) {
+          j += parseInt(tmp[i][k]);
+          continue;
+        }
+        setupTile(7-i, j, tmp[i][k], this.board.board);
+        j += 1;
+      }
     }
-    setupTile(7-i, j, tmp[i][k], board.board);
-    j += 1;
+    this.board.update();
+    c.addEventListener('click', this.board.selectTile.bind(this.board));
   }
 }
-board.update();
-c.addEventListener('click', board.selectTile.bind(board));
+
+var setupString = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR';
+game = new Game(setupString);
