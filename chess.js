@@ -317,6 +317,8 @@ class Board {
     this.currentMoves = [];
     this.whitePieces = new Set();
     this.blackPieces = new Set();
+    this.captureSound = new Audio('sounds/capture.mp3');
+    this.moveSound = new Audio('sounds/move.mp3');
     this.setupBoard(setup);
   }
 
@@ -330,6 +332,10 @@ class Board {
 
   move(t1, t2) {
     t1.piece.move();
+    if (t2.piece != null)
+      this.captureSound.play();
+    else
+      this.moveSound.play();
     if (t1.piece.color == 'white') {
       this.whitePieces.delete(t1);
       this.whitePieces.add(t2);
