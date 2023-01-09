@@ -1,7 +1,6 @@
 var c = document.getElementById('mainCanvas');
 var ctx = c.getContext('2d');
 ctx.font = '20px Arial';
-const possibleStates = ['e', 'p', 'b', 'kn', 'r', 'q', 'k'];
 
 class Tile {
   constructor(x, y, piece) {
@@ -18,7 +17,7 @@ class Tile {
   }
 
   clear() {
-    if (this.color > 2)
+    if (this.color >= 2)
       this.color -= 2;
     this.draw();
   }
@@ -78,11 +77,11 @@ class Piece {
     if (i < 0 || i >= board.length || j < 0 || j >= board.length)
       return false;
     if (board[i][j].piece == null) {
-      moves.push(board[i][j]);
+      moves.add(board[i][j]);
       return true;
     }
     if (board[i][j].piece.color != this.color)
-      moves.push(board[i][j]);
+      moves.add(board[i][j]);
     return false;
   }
 }
@@ -93,26 +92,26 @@ class Pawn extends Piece {
   }
 
   getMoves(i, j, board) {
-    var moves = [];
+    var moves = new Set();
     if (this.color == 'white') {
       if (i == 1 && board[i+1][j].piece == null && board[i+2][j].piece == null)
-        moves.push(board[i+2][j]);
+        moves.add(board[i+2][j]);
       if (board[i+1][j].piece == null)
-        moves.push(board[i+1][j]);
+        moves.add(board[i+1][j]);
       if (j+1 < board.length && board[i+1][j+1].piece != null && board[i+1][j+1].piece.color == 'black')
-        moves.push(board[i+1][j+1]);
+        moves.add(board[i+1][j+1]);
       if (j-1 >= 0 && board[i+1][j-1].piece != null && board[i+1][j-1].piece.color == 'black')
-        moves.push(board[i+1][j-1]);
+        moves.add(board[i+1][j-1]);
     }
     else {
       if (i == 6 && board[i-1][j].piece == null && board[i-2][j].piece == null)
-        moves.push(board[i-2][j]);
+        moves.add(board[i-2][j]);
       if (board[i-1][j].piece == null)
-        moves.push(board[i-1][j]);
+        moves.add(board[i-1][j]);
       if (j+1 < board.length && board[i-1][j+1].piece != null && board[i-1][j+1].piece.color == 'white')
-        moves.push(board[i-1][j+1]);
+        moves.add(board[i-1][j+1]);
       if (j-1 >= 0 && board[i-1][j-1].piece != null && board[i-1][j-1].piece.color == 'white')
-        moves.push(board[i-1][j-1]);
+        moves.add(board[i-1][j-1]);
     }
     return moves;
   }
@@ -142,7 +141,7 @@ class Queen extends Piece {
   }
 
   getMoves(i, j, board) {
-    var moves = [];
+    var moves = new Set();
     for (var k=1; i+k<board.length&&j+k<board.length;k++)
       if (!this.insertMove(i+k, j+k, board, moves))
         break;
@@ -188,7 +187,7 @@ class Bishop extends Piece {
   }
 
   getMoves(i, j, board) {
-    var moves = [];
+    var moves = new Set();
     for (var k=1; i+k<board.length&&j+k<board.length;k++)
       if (!this.insertMove(i+k, j+k, board, moves))
         break;
@@ -224,7 +223,7 @@ class Rook extends Piece {
   }
 
   getMoves(i, j, board) {
-    var moves = [];
+    var moves = new Set();
     for (var k=i+1; k<board.length; k++)
       if (!this.insertMove(k, j, board, moves))
         break;
@@ -263,7 +262,7 @@ class Knight extends Piece {
   }
 
   getMoves(i, j, board) {
-    var moves = [];
+    var moves = new Set();
     this.insertMove(i+2, j+1, board, moves);
     this.insertMove(i+2, j-1, board, moves);
     this.insertMove(i+1, j+2, board, moves);
@@ -294,7 +293,7 @@ class King extends Piece {
   }
 
   getMoves(i, j, board) {
-    var moves = [];
+    var moves = new Set();
     for (var y=-1; y<=1; y++)
       for (var x=-1; x<=1; x++)
         this.insertMove(i+y, j+x, board, moves);
@@ -315,6 +314,9 @@ class Board {
     }
     this.focused = null;
     this.currentMoves = [];
+    this.allMoves = new Array(8);
+    for (var i=0; i<this.board.length; i++)
+      this.allMoves[i] = new Array(8);
     this.whitePieces = new Set();
     this.blackPieces = new Set();
     this.captureSound = new Audio('sounds/capture.mp3');
@@ -328,6 +330,10 @@ class Board {
         this.board[i][j].draw();
       }
     }
+  }
+
+  getAllMoves(color) {
+    return;
   }
 
   move(t1, t2) {
@@ -353,17 +359,16 @@ class Board {
     t1.draw();
     t2.draw();
   }
-
   selectTile(e) {
     const i = 7-Math.floor(e.clientY / 100);
     const j = Math.floor(e.clientX / 100);
     var moved = false
-    for (var s=0; s<this.currentMoves.length; s++) {
-      if (!moved && this.board[i][j] == this.currentMoves[s]) {
+    for (var tile of this.currentMoves) {
+      if (!moved && this.board[i][j] == tile) {
         this.move(this.focused, this.board[i][j]);
         var moved = true;
       }
-      this.currentMoves[s].clear();
+      tile.clear();
     }
     this.currentMoves = [];
     if (moved)
@@ -371,18 +376,18 @@ class Board {
     if (this.board[i][j].piece == null)
       return;
     if (this.focused  == this.board[i][j]) {
-      this.focused.highlight();
+      this.focused.clear();
       this.focused = null;
     }
     else {
       if (this.focused != null)
-        this.focused.highlight();
+        this.focused.clear();
       this.board[i][j].highlight();
       this.focused = this.board[i][j];
 
       this.currentMoves = this.focused.piece.getMoves(i, j, this.board);
-      for (var k=0; k<this.currentMoves.length; k++) {
-        this.currentMoves[k].showMove();
+      for (var tile of this.currentMoves) {
+        tile.showMove();
       }
     }
   }
@@ -434,7 +439,10 @@ class Board {
     this.update();
     c.addEventListener('click', this.selectTile.bind(this));
   }
-}
+
+  validKingMove(tile) {
+    return;
+}}
 
 class Game {
   constructor(setup) {
