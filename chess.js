@@ -338,15 +338,14 @@ class King extends Piece {
 
 
 class Board {
-  constructor(setup, simulation) {
+
+  constructor(setup) {
     this.board = new Array(8);
     for (var i=0; i<this.board.length; i++) {
       this.board[i] = new Array(8);
-      if (!simulation) {
-        for (var j=0; j<this.board[i].length; j++) {
-          this.board[i][j] = new Tile(j, 7-i, null);
-          this.board[i][j].draw();
-        }
+      for (var j=0; j<this.board[i].length; j++) {
+        this.board[i][j] = new Tile(j, 7-i, null);
+        this.board[i][j].draw();
       }
     }
     this.focused = null;
@@ -358,10 +357,7 @@ class Board {
     this.blackPieces = new Set();
     this.captureSound = new Audio('sounds/capture.mp3');
     this.moveSound = new Audio('sounds/move.mp3');
-    if (!simulation) {
-      this.setupBoard(setup);
-      this.newBoard = this.copy();
-    }
+    this.setupBoard(setup);
   }
 
   update() {
@@ -423,16 +419,26 @@ class Board {
   validKing(color) {
     if (color == 'black') {
       var tile = this.blackKing;
-      var moves = this.getAllMoves('white');
+      var moves = this.getControlledTiles('white');
     }
     else {
       var tile = this.whiteKing;
-      var moves = this.getAllMoves('black');
+      var moves = this.getControlledTiles('black');
     }
     return (!moves.has(tile));
   }
 
-  getAllMoves(color) {
+  updateAllMoves(color) {
+    if (color == 'white')
+      var tiles = this.whitePieces;
+    else
+      var tiles = this.blackPieces;
+    for (var tile of tiles) {
+      return;
+    }
+  }
+
+  getControlledTiles(color) {
     if (color == 'white')
       var tiles = this.whitePieces;
     else
@@ -445,13 +451,13 @@ class Board {
   }
 
   move(t1, t2, isSimulation) {
-    t1.piece.move();
-    if (t2.piece != null) {
-      if (!isSimulation)
+    if (!isSimulation) {
+      t1.piece.move();
+      if (t2.piece != null) 
         this.captureSound.play();
+      else
+        this.moveSound.play();
     }
-    else if (!isSimulation)
-      this.moveSound.play();
     if (t1.piece.color == 'white') {
       this.whitePieces.delete(t1);
       this.whitePieces.add(t2);
@@ -473,7 +479,6 @@ class Board {
     if (!isSimulation) {
       t1.draw();
       t2.draw();
-      this.newBoard.move(this.newBoard.board[7-t1.y][t1.x], this.newBoard.board[7-t2.y][t2.x], true);
     }
   }
 
@@ -506,12 +511,14 @@ class Board {
       this.currentMoves = this.focused.piece.getMoves(i, j, this.board);
       var tmp = new Set();
       for (var tile of this.currentMoves) {
-        this.newBoard.simulate(7-this.focused.y, this.focused.x, 7-tile.y, tile.x);
-        if (this.newBoard.validKing(this.focused.piece.color)) {
+        let color = this.focused.piece.color
+        this.simulate(7-this.focused.y, this.focused.x, 7-tile.y, tile.x);
+        let valid = this.validKing(color);
+        this.callback(7-this.focused.y, this.focused.x, 7-tile.y, tile.x);
+        if (valid) {
           tile.showMove();
           tmp.add(tile);
         }
-        this.newBoard.callback(7-this.focused.y, this.focused.x, 7-tile.y, tile.x);
       }
       this.currentMoves = tmp;
     }
@@ -543,7 +550,7 @@ class Board {
     else if (s == 'Q')
       this.board[i][j].piece = new Queen('white')
     else if (s == 'k') {
-      this.blacKing = this.board[i][j];
+      this.blackKing = this.board[i][j];
       this.board[i][j].piece = new King('black')
     }
     else if (s == 'K') {
@@ -573,7 +580,7 @@ class Board {
 
 class Game {
   constructor(setup) {
-    this.board = new Board(setup, false);
+    this.board = new Board(setup);
   }
 }
 
