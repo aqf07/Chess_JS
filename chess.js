@@ -504,12 +504,16 @@ class Board {
       this.focused = this.board[i][j];
 
       this.currentMoves = this.focused.piece.getMoves(i, j, this.board);
+      var tmp = new Set();
       for (var tile of this.currentMoves) {
         this.newBoard.simulate(7-this.focused.y, this.focused.x, 7-tile.y, tile.x);
-        if (this.newBoard.validKing(this.focused.piece.color))
+        if (this.newBoard.validKing(this.focused.piece.color)) {
           tile.showMove();
+          tmp.add(tile);
+        }
         this.newBoard.callback(7-this.focused.y, this.focused.x, 7-tile.y, tile.x);
       }
+      this.currentMoves = tmp;
     }
   }
 
