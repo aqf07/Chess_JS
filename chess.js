@@ -76,73 +76,87 @@ class Tile {
 
 
 class Piece {
-  constructor(color) {
+  constructor(color, master) {
     this.color = color;
+    this.master = master;
   }
 
-  getTakingMoves(i, j, board) {
+  getTakingMoves(i, j) {
     if (this.constructor.name == 'Pawn')
-      return this.getMoves2(i, j, board);
-    return this.getMoves(i, j, board);
+      return this.getMoves2(i, j);
+    return this.getMoves(i, j);
+  }
+
+  moves(i, j) {
+    var moves = [];
+    if (this.constructor.name == 'King') {
+      for (var tiles of this.master.checkCastling(this.color)) {
+        moves.push(new Castle(tiles[0], tiles[1], tiles[2], tiles[3], this.master));
+      }
+    }
+    for (var tile of this.getMoves(i, j)) {
+      moves.push(new Move(this.master.board[i][j], tile, this.master));
+    }
+    return moves;
   }
 
   copy() {
     return new this.constructor(this.color);
   }
 
-  insertMove(i, j, board, moves) {
-    if (i < 0 || i >= board.length || j < 0 || j >= board.length)
+  insertMove(i, j, moves) {
+    if (i < 0 || i >= this.master.board.length || j < 0 || j >= this.master.board.length)
       return false;
-    if (board[i][j].piece == null) {
-      moves.add(board[i][j]);
+    if (this.master.board[i][j].piece == null) {
+      moves.add(this.master.board[i][j]);
       return true;
     }
-    if (board[i][j].piece.color != this.color)
-      moves.add(board[i][j]);
+    if (this.master.board[i][j].piece.color != this.color)
+      moves.add(this.master.board[i][j]);
     return false;
   }
 }
 
 
 class Pawn extends Piece {
-  constructor(color) {
-    super(color);
+  constructor(color, master) {
+    super(color, master);
   }
 
-  getMoves2(i, j, board) {
+  getMoves2(i, j) {
     var moves = new Set();
     if (this.color == 'black') {
-      this.insertMove(i-1, j+1, board, moves);
-      this.insertMove(i-1, j-1, board, moves);
+      this.insertMove(i-1, j+1, moves);
+      this.insertMove(i-1, j-1, moves);
     }
     else {
-      this.insertMove(i+1, j+1, board, moves);
-      this.insertMove(i+1, j-1, board, moves);
+      this.insertMove(i+1, j+1, moves);
+      this.insertMove(i+1, j-1, moves);
     }
     return moves;
   }
 
-  getMoves(i, j, board) {
+  getMoves(i, j) {
     var moves = new Set();
     if (this.color == 'white') {
-      if (i == 1 && board[i+1][j].piece == null && board[i+2][j].piece == null)
-        moves.add(board[i+2][j]);
-      if (board[i+1][j].piece == null)
-        moves.add(board[i+1][j]);
-      if (j+1 < board.length && board[i+1][j+1].piece != null && board[i+1][j+1].piece.color == 'black')
-        moves.add(board[i+1][j+1]);
-      if (j-1 >= 0 && board[i+1][j-1].piece != null && board[i+1][j-1].piece.color == 'black')
-        moves.add(board[i+1][j-1]);
+      if (i == 1 && this.master.board[i+1][j].piece == null && this.master.board[i+2][j].piece == null)
+        moves.add(this.master.board[i+2][j]);
+      if (this.master.board[i+1][j].piece == null)
+        moves.add(this.master.board[i+1][j]);
+      if (j+1 < this.master.board.length && this.master.board[i+1][j+1].piece != null && this.master.board[i+1][j+1].piece.color == 'black')
+        moves.add(this.master.board[i+1][j+1]);
+      if (j-1 >= 0 && this.master.board[i+1][j-1].piece != null && this.master.board[i+1][j-1].piece.color == 'black')
+        moves.add(this.master.board[i+1][j-1]);
     }
     else {
-      if (i == 6 && board[i-1][j].piece == null && board[i-2][j].piece == null)
-        moves.add(board[i-2][j]);
-      if (board[i-1][j].piece == null)
-        moves.add(board[i-1][j]);
-      if (j+1 < board.length && board[i-1][j+1].piece != null && board[i-1][j+1].piece.color == 'white')
-        moves.add(board[i-1][j+1]);
-      if (j-1 >= 0 && board[i-1][j-1].piece != null && board[i-1][j-1].piece.color == 'white')
-        moves.add(board[i-1][j-1]);
+      if (i == 6 && this.master.board[i-1][j].piece == null && this.master.board[i-2][j].piece == null)
+        moves.add(this.master.board[i-2][j]);
+      if (this.master.board[i-1][j].piece == null)
+        moves.add(this.master.board[i-1][j]);
+      if (j+1 < this.master.board.length && this.master.board[i-1][j+1].piece != null && this.master.board[i-1][j+1].piece.color == 'white')
+        moves.add(this.master.board[i-1][j+1]);
+      if (j-1 >= 0 && this.master.board[i-1][j-1].piece != null && this.master.board[i-1][j-1].piece.color == 'white')
+        moves.add(this.master.board[i-1][j-1]);
     }
     return moves;
   }
@@ -161,8 +175,8 @@ class Pawn extends Piece {
 
 
 class Queen extends Piece {
-  constructor(color) {
-    super(color);
+  constructor(color, master) {
+    super(color, master);
   }
 
   getStr() {
@@ -172,31 +186,31 @@ class Queen extends Piece {
       return 'chess_pieces/bQ.svg';
   }
 
-  getMoves(i, j, board) {
+  getMoves(i, j) {
     var moves = new Set();
-    for (var k=1; i+k<board.length&&j+k<board.length;k++)
-      if (!this.insertMove(i+k, j+k, board, moves))
+    for (var k=1; i+k<this.master.board.length&&j+k<this.master.board.length;k++)
+      if (!this.insertMove(i+k, j+k, moves))
         break;
-    for (var k=1; i+k<board.length&&j-k>=0;k++)
-      if (!this.insertMove(i+k, j-k, board, moves))
+    for (var k=1; i+k<this.master.board.length&&j-k>=0;k++)
+      if (!this.insertMove(i+k, j-k, moves))
         break;
-    for (var k=1; i-k>=0&&j+k<board.length;k++)
-      if (!this.insertMove(i-k, j+k, board, moves))
+    for (var k=1; i-k>=0&&j+k<this.master.board.length;k++)
+      if (!this.insertMove(i-k, j+k, moves))
         break;
     for (var k=1; i-k>=0&&j-k>=0;k++)
-      if (!this.insertMove(i-k, j-k, board, moves))
+      if (!this.insertMove(i-k, j-k, moves))
         break;
-    for (var k=i+1; k<board.length; k++)
-      if (!this.insertMove(k, j, board, moves))
+    for (var k=i+1; k<this.master.board.length; k++)
+      if (!this.insertMove(k, j, moves))
         break;
     for (var k=i-1; k>=0; k--)
-      if (!this.insertMove(k, j, board, moves))
+      if (!this.insertMove(k, j, moves))
         break;
-    for (var k=j+1; k<board.length; k++)
-      if (!this.insertMove(i, k, board, moves))
+    for (var k=j+1; k<this.master.board.length; k++)
+      if (!this.insertMove(i, k, moves))
         break;
     for (var k=j-1; k>=0; k--)
-      if (!this.insertMove(i, k, board, moves))
+      if (!this.insertMove(i, k, moves))
         break;
     return moves;
   }
@@ -208,8 +222,8 @@ class Queen extends Piece {
 
 
 class Bishop extends Piece {
-  constructor(color) {
-    super(color);
+  constructor(color, master) {
+    super(color, master);
   }
 
   getStr() {
@@ -219,19 +233,19 @@ class Bishop extends Piece {
       return 'chess_pieces/bB.svg';
   }
 
-  getMoves(i, j, board) {
+  getMoves(i, j) {
     var moves = new Set();
-    for (var k=1; i+k<board.length&&j+k<board.length;k++)
-      if (!this.insertMove(i+k, j+k, board, moves))
+    for (var k=1; i+k<this.master.board.length&&j+k<this.master.board.length;k++)
+      if (!this.insertMove(i+k, j+k, moves))
         break;
-    for (var k=1; i+k<board.length&&j-k>=0;k++)
-      if (!this.insertMove(i+k, j-k, board, moves))
+    for (var k=1; i+k<this.master.board.length&&j-k>=0;k++)
+      if (!this.insertMove(i+k, j-k, moves))
         break;
-    for (var k=1; i-k>=0&&j+k<board.length;k++)
-      if (!this.insertMove(i-k, j+k, board, moves))
+    for (var k=1; i-k>=0&&j+k<this.master.board.length;k++)
+      if (!this.insertMove(i-k, j+k, moves))
         break;
     for (var k=1; i-k>=0&&j-k>=0;k++)
-      if (!this.insertMove(i-k, j-k, board, moves))
+      if (!this.insertMove(i-k, j-k, moves))
         break;
     return moves;
   }
@@ -243,8 +257,8 @@ class Bishop extends Piece {
 
 
 class Rook extends Piece {
-  constructor(color) {
-    super(color);
+  constructor(color, master) {
+    super(color, master);
     this.hasMoved = false;
   }
 
@@ -255,19 +269,19 @@ class Rook extends Piece {
       return 'chess_pieces/bR.svg';
   }
 
-  getMoves(i, j, board) {
+  getMoves(i, j) {
     var moves = new Set();
-    for (var k=i+1; k<board.length; k++)
-      if (!this.insertMove(k, j, board, moves))
+    for (var k=i+1; k<this.master.board.length; k++)
+      if (!this.insertMove(k, j, moves))
         break;
     for (var k=i-1; k>=0; k--)
-      if (!this.insertMove(k, j, board, moves))
+      if (!this.insertMove(k, j, moves))
         break;
-    for (var k=j+1; k<board.length; k++)
-      if (!this.insertMove(i, k, board, moves))
+    for (var k=j+1; k<this.master.board.length; k++)
+      if (!this.insertMove(i, k, moves))
         break;
     for (var k=j-1; k>=0; k--)
-      if (!this.insertMove(i, k, board, moves))
+      if (!this.insertMove(i, k, moves))
         break;
     return moves;
   }
@@ -280,8 +294,8 @@ class Rook extends Piece {
 
 
 class Knight extends Piece {
-  constructor(color) {
-    super(color);
+  constructor(color, master) {
+    super(color, master);
   }
 
   move() {
@@ -295,24 +309,24 @@ class Knight extends Piece {
       return 'chess_pieces/bN.svg';
   }
 
-  getMoves(i, j, board) {
+  getMoves(i, j) {
     var moves = new Set();
-    this.insertMove(i+2, j+1, board, moves);
-    this.insertMove(i+2, j-1, board, moves);
-    this.insertMove(i+1, j+2, board, moves);
-    this.insertMove(i+1, j-2, board, moves);
-    this.insertMove(i-1, j+2, board, moves);
-    this.insertMove(i-1, j-2, board, moves);
-    this.insertMove(i-2, j+1, board, moves);
-    this.insertMove(i-2, j-1, board, moves);
+    this.insertMove(i+2, j+1, moves);
+    this.insertMove(i+2, j-1, moves);
+    this.insertMove(i+1, j+2, moves);
+    this.insertMove(i+1, j-2, moves);
+    this.insertMove(i-1, j+2, moves);
+    this.insertMove(i-1, j-2, moves);
+    this.insertMove(i-2, j+1, moves);
+    this.insertMove(i-2, j-1, moves);
     return moves;
   }
 }
 
 
 class King extends Piece {
-  constructor(color) {
-    super(color);
+  constructor(color, master) {
+    super(color, master);
     this.hasMoved = false;
   }
 
@@ -327,15 +341,106 @@ class King extends Piece {
     this.hasMoved = true;
   }
 
-  getMoves(i, j, board) {
+  getMoves(i, j) {
     var moves = new Set();
     for (var y=-1; y<=1; y++)
       for (var x=-1; x<=1; x++)
-        this.insertMove(i+y, j+x, board, moves);
+        this.insertMove(i+y, j+x, moves);
     return moves;
   }
 }
 
+
+class Move {
+
+  constructor(t1, t2, master) {
+    this.t1 = t1;
+    this.t2 = t2;
+    this.master = master;
+  }
+
+  makeMove(isSimulation) {
+    var t1 = this.t1;
+    var t2 = this.t2
+    var board = this.master;
+    if (!isSimulation) {
+      t1.piece.move();
+      if (t2.piece != null)
+        board.captureSound.play();
+      else
+        board.moveSound.play();
+    }
+    if (t1.piece.color == 'white') {
+      board.whitePieces.delete(t1);
+      board.whitePieces.add(t2);
+      if (t2.piece != null)
+        board.blackPieces.delete(t2);
+      if (t1.piece.constructor.name == 'King')
+        board.whiteKing = t2;
+    }
+    else {
+      board.blackPieces.delete(t1);
+      board.blackPieces.add(t2);
+      if (t2.piece != null)
+        board.whitePieces.delete(t2);
+      if (t1.piece.constructor.name == 'King')
+        board.blackKing = t2;
+    }
+    t2.piece = t1.piece;
+    t1.piece = null;
+    if (!isSimulation) {
+      board.checkPromotion();
+      t1.draw();
+      t2.draw();
+    }
+  }
+
+  unmakeMove(lastPiece) {
+    var t1 = this.t1;
+    var t2 = this.t2
+    var board = this.master;
+    if (t2.piece.color == 'white') {
+      board.whitePieces.delete(t2);
+      board.whitePieces.add(t1);
+      if (lastPiece != null)
+        board.blackPieces.add(t2);
+      if (t2.piece.constructor.name == 'King')
+        board.whiteKing = t1;
+    }
+    else {
+      board.blackPieces.delete(t2);
+      board.blackPieces.add(t1);
+      if (lastPiece != null)
+        board.whitePieces.add(t2);
+      if (t2.piece.constructor.name == 'King')
+        board.blackKing = t1;
+    }
+    t1.piece = t2.piece;
+    t2.piece = lastPiece;
+  }
+}
+
+
+class Castle extends Move {
+  constructor(t1, t2, t3, t4, master) {
+    super(t1, t2, master);
+    this.t3 = t3;
+    this.t4 = t4;
+    this.master = master
+    this.kingMove = new Move(this.t1, this.t2, this.master);
+    this.rookMove = new Move(this.t3, this.t4, this.master);
+  }
+
+  makeMove(isSimulation) {
+    this.kingMove.makeMove(isSimulation);
+    this.rookMove.makeMove(isSimulation);
+  }
+
+  unmakeMove(lastPiece) {
+    this.kingMove.unmakeMove(null);
+    this.rookMove.unmakeMove(null);
+  }
+}
 
 class Board {
 
@@ -390,55 +495,28 @@ class Board {
     return newBoard;
   }
 
-  simulate(i1, j1, i2, j2)  {
-    this.t2Piece = this.board[i2][j2].piece
-    this.move(this.board[i1][j1], this.board[i2][j2], true);
+  simulate(move)  {
+    this.t2Piece = move.t2.piece
+    move.makeMove(true);
   }
 
-  callback(i1, j1, i2, j2) {
-    if (this.board[i2][j2].piece.color == 'white') {
-      this.whitePieces.delete(this.board[i2][j2]);
-      this.whitePieces.add(this.board[i1][j1]);
-      if (this.t2Piece != null)
-        this.blackPieces.add(this.board[i2][j2]);
-      if (this.board[i2][j2].piece.constructor.name == 'King')
-        this.whiteKing = this.board[i1][j1];
-    }
-    else {
-      this.blackPieces.delete(this.board[i2][j2]);
-      this.blackPieces.add(this.board[i1][j1]);
-      if (this.t2Piece != null)
-        this.whitePieces.add(this.board[i2][j2]);
-      if (this.board[i2][j2].piece.constructor.name == 'King')
-        this.blackKing = this.board[i1][j1];
-    }
-    this.board[i1][j1].piece = this.board[i2][j2].piece;
-    this.board[i2][j2].piece = this.t2Piece;
+  callback(move) {
+    move.unmakeMove(this.t2Piece);
   }
 
   validKing(color) {
     if (color == 'black') {
       var tile = this.blackKing;
-      var moves = this.getControlledTiles('white');
+      var moves = this.getAllMoves('white');
     }
     else {
       var tile = this.whiteKing;
-      var moves = this.getControlledTiles('black');
+      var moves = this.getAllMoves('black');
     }
     return (!moves.has(tile));
   }
 
-  updateAllMoves(color) {
-    if (color == 'white')
-      var tiles = this.whitePieces;
-    else
-      var tiles = this.blackPieces;
-    for (var tile of tiles) {
-      return;
-    }
-  }
-
-  getControlledTiles(color) {
+  getAllMoves(color) {
     if (color == 'white')
       var tiles = this.whitePieces;
     else
@@ -450,48 +528,70 @@ class Board {
     return allMoves;
   }
 
-  move(t1, t2, isSimulation) {
-    if (!isSimulation) {
-      t1.piece.move();
-      if (t2.piece != null) 
-        this.captureSound.play();
-      else
-        this.moveSound.play();
+  promote(tile) {
+    tile.piece = new Queen(tile.piece.color, this);
+  }
+
+  checkPromotion() {
+    for (var i=0; i<this.board[0].length; i++) {
+      if (this.board[0][i].piece != null && this.board[0][i].piece.constructor.name == 'Pawn') {
+        this.promote(this.board[0][i]);
+        return;
+      }
+      if (this.board[this.board.length-1][i].piece != null && this.board[this.board.length-1][i].piece.constructor.name == 'Pawn') {
+        this.promote(this.board[this.board.length-1][i]);
+        return;
+      }
     }
-    if (t1.piece.color == 'white') {
-      this.whitePieces.delete(t1);
-      this.whitePieces.add(t2);
-      if (t2.piece != null)
-        this.blackPieces.delete(t2);
-      if (t1.piece.constructor.name == 'King')
-        this.whiteKing = t2;
+  }
+
+  checkCastling(color) {
+    if (color == 'white') {
+      var index = 0;
+      var moves = this.getAllMoves('black');
     }
     else {
-      this.blackPieces.delete(t1);
-      this.blackPieces.add(t2);
-      if (t2.piece != null)
-        this.whitePieces.delete(t2);
-      if (t1.piece.constructor.name == 'King')
-        this.blackKing = t2;
+      var index = this.board.length-1;
+      var moves = this.getAllMoves('white');
     }
-    t2.piece = t1.piece;
-    t1.piece = null;
-    if (!isSimulation) {
-      t1.draw();
-      t2.draw();
-    }
+    var res = [];
+    var t1 = this.board[index][4];
+    var t2 = this.board[index][0];
+    var t3 = this.board[index][this.board[index].length-1];
+    if (t1.piece != null && t1.piece.constructor.name == 'King' && !t1.piece.hasMoved) {
+      if (t2.piece != null && t2.piece.constructor.name == 'Rook'&& !t2.piece.hasMoved) {
+        var valid = !(moves.has(this.board[index][4]));
+        for (var j=2; j<4; j++) {
+          if (this.board[index][j].piece != null || moves.has(this.board[index][j])) {
+            valid = false;
+          }
+        }
+        if (valid)
+          res.push([this.board[index][4], this.board[index][2], this.board[index][0], this.board[index][3]]);
+      }
+      if (t3.piece != null && t3.piece.constructor.name == 'Rook' && !t3.piece.hasMoved) {
+        var valid = !(moves.has(this.board[index][4]));
+        for (var j=5; j<=6; j++) {
+          if (this.board[index][j].piece != null || moves.has(this.board[index][j]))
+            valid = false;
+        }
+        if (valid)
+          res.push([this.board[index][4], this.board[index][6], this.board[index][this.board.length-1], this.board[index][5]]);
+        }
+      }
+      return res;
   }
 
   selectTile(e) {
     const i = 7-Math.floor(e.clientY / 100);
     const j = Math.floor(e.clientX / 100);
     var moved = false
-    for (var tile of this.currentMoves) {
-      if (!moved && this.board[i][j] == tile) {
-        this.move(this.focused, this.board[i][j], false);
+    for (var move of this.currentMoves) {
+      if (!moved && this.board[i][j] == move.t2) {
+        move.makeMove(false);
         var moved = true;
       }
-      tile.clear();
+      move.t2.clear();
     }
     this.currentMoves = [];
     if (moved)
@@ -508,16 +608,16 @@ class Board {
       this.board[i][j].highlight();
       this.focused = this.board[i][j];
 
-      this.currentMoves = this.focused.piece.getMoves(i, j, this.board);
+      this.currentMoves = this.focused.piece.moves(i, j);
       var tmp = new Set();
-      for (var tile of this.currentMoves) {
+      for (var move of this.currentMoves) {
         let color = this.focused.piece.color
-        this.simulate(7-this.focused.y, this.focused.x, 7-tile.y, tile.x);
+        this.simulate(move);
         let valid = this.validKing(color);
-        this.callback(7-this.focused.y, this.focused.x, 7-tile.y, tile.x);
+        this.callback(move);
         if (valid) {
-          tile.showMove();
-          tmp.add(tile);
+          move.t2.showMove();
+          tmp.add(move);
         }
       }
       this.currentMoves = tmp;
@@ -530,32 +630,32 @@ class Board {
     else
       this.blackPieces.add(this.board[i][j]);
     if (s == 'p')
-      this.board[i][j].piece = new Pawn('black');
+      this.board[i][j].piece = new Pawn('black', this);
     else if (s == 'P')
-      this.board[i][j].piece = new Pawn('white');
+      this.board[i][j].piece = new Pawn('white', this);
     else if (s == 'n')
-      this.board[i][j].piece = new Knight('black');
+      this.board[i][j].piece = new Knight('black', this);
     else if (s == 'N')
-      this.board[i][j].piece = new Knight('white');
+      this.board[i][j].piece = new Knight('white', this);
     else if (s == 'b')
-      this.board[i][j].piece = new Bishop('black');
+      this.board[i][j].piece = new Bishop('black', this);
     else if (s=='B')
-      this.board[i][j].piece = new Bishop('white');
+      this.board[i][j].piece = new Bishop('white', this);
     else if (s == 'r')
-      this.board[i][j].piece = new Rook('black');
+      this.board[i][j].piece = new Rook('black', this);
     else if (s == 'R')
-      this.board[i][j].piece = new Rook('white');
+      this.board[i][j].piece = new Rook('white', this);
     else if (s == 'q')
-      this.board[i][j].piece = new Queen('black');
+      this.board[i][j].piece = new Queen('black', this);
     else if (s == 'Q')
-      this.board[i][j].piece = new Queen('white')
+      this.board[i][j].piece = new Queen('white', this);
     else if (s == 'k') {
       this.blackKing = this.board[i][j];
-      this.board[i][j].piece = new King('black')
+      this.board[i][j].piece = new King('black', this);
     }
     else if (s == 'K') {
       this.whiteKing = this.board[i][j];
-      this.board[i][j].piece = new King('white');
+      this.board[i][j].piece = new King('white', this);
     }
   }
 
