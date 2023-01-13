@@ -4,7 +4,7 @@ ctx.font = '20px Arial';
 
 class Tile {
   constructor(x, y, piece) {
-    this.colors = ['#e2cfaf', '#716757', '#ffe9c5', '#8d816d'];
+    this.colors = ['#e2cfaf', '#716757', '#b6c9e4', '#707d8f'];
     this.dotColors = ['#c6b599', '#554d41']
     this.x = x;
     this.y = y;
@@ -28,6 +28,9 @@ class Tile {
     this.draw();
   }
 
+  isHighlighted() {
+    return this.color >= 2;
+  }
 
   setState(newState) {
     this.state = newState;
@@ -47,8 +50,6 @@ class Tile {
   highlight() {
     if (this.color < 2)
       this.color += 2;
-    else
-      this.color -= 2;
     this.draw();
   }
 
@@ -92,6 +93,12 @@ class Piece {
     if (this.constructor.name == 'King') {
       for (var tiles of this.master.checkCastling(this.color)) {
         moves.push(new Castle(tiles[0], tiles[1], tiles[2], tiles[3], this.master));
+      }
+    }
+    if (this.constructor.name == 'Pawn') {
+      for (var tiles of this.master.checkEnPassant(this.color)) {
+        if (this == tiles[0].piece)
+          moves.push(new EnPassant(tiles[0], tiles[1], tiles[2], this.master));
       }
     }
     for (var tile of this.getMoves(i, j)) {
@@ -359,16 +366,18 @@ class Move {
     this.master = master;
   }
 
-  makeMove(isSimulation) {
+  makeMove(isSimulation, sound) {
     var t1 = this.t1;
     var t2 = this.t2
     var board = this.master;
     if (!isSimulation) {
       t1.piece.move();
-      if (t2.piece != null)
-        board.captureSound.play();
-      else
-        board.moveSound.play();
+      if (sound) {
+        if (t2.piece != null)
+          board.captureSound.play();
+        else
+          board.moveSound.play();
+      }
     }
     if (t1.piece.color == 'white') {
       board.whitePieces.delete(t1);
@@ -426,14 +435,15 @@ class Castle extends Move {
     super(t1, t2, master);
     this.t3 = t3;
     this.t4 = t4;
-    this.master = master
     this.kingMove = new Move(this.t1, this.t2, this.master);
     this.rookMove = new Move(this.t3, this.t4, this.master);
   }
 
   makeMove(isSimulation) {
-    this.kingMove.makeMove(isSimulation);
-    this.rookMove.makeMove(isSimulation);
+    this.kingMove.makeMove(isSimulation, false);
+    this.rookMove.makeMove(isSimulation, false);
+    if (!isSimulation)
+      this.master.castleSound.play();
   }
 
   unmakeMove(lastPiece) {
@@ -441,6 +451,42 @@ class Castle extends Move {
     this.rookMove.unmakeMove(null);
   }
 }
+
+
+class EnPassant extends Move {
+  constructor(t1, t2, t3, master) {
+    super(t1, t2, master);
+    this.t3 = t3;
+    this.t3Piece = t3.piece;
+    this.enPassant = new Move(this.t1, this.t2, this.master);
+  }
+
+  makeMove(isSimulation) {
+    if (this.t3Piece.color == 'black') {
+      this.master.blackPieces.delete(this.t3);
+    }
+    else {
+      this.master.whitePieces.delete(this.t3);
+    }
+    this.enPassant.makeMove(isSimulation, false);
+    this.t3.piece = null;
+    if (!isSimulation) {
+      this.master.captureSound.play();
+      this.t3.draw();
+    }
+
+  }
+
+  unmakeMove(lastPiece) {
+    this.enPassant.unmakeMove(lastPiece);
+    if (this.t3Piece.color == 'black')
+      this.master.blackPieces.add(this.t3);
+    else
+      this.master.whitePieces.add(this.t3);
+    this.t3.piece = this.t3Piece;
+  }
+}
+
 
 class Board {
 
@@ -462,6 +508,8 @@ class Board {
     this.blackPieces = new Set();
     this.captureSound = new Audio('sounds/capture.mp3');
     this.moveSound = new Audio('sounds/move.mp3');
+    this.castleSound = new Audio('sounds/castle.mp3')
+    this.lastMove = null;
     this.setupBoard(setup);
   }
 
@@ -497,7 +545,7 @@ class Board {
 
   simulate(move)  {
     this.t2Piece = move.t2.piece
-    move.makeMove(true);
+    move.makeMove(true, false);
   }
 
   callback(move) {
@@ -582,22 +630,55 @@ class Board {
       return res;
   }
 
+  checkEnPassant(color) {
+    if (this.lastMove == null || this.lastMove.t2.piece.constructor.name != 'Pawn' || this.lastMove.t2.piece.color == color || Math.abs(this.lastMove.t2.y - this.lastMove.t1.y) != 2)
+      return [];
+    if (color == 'white') {
+      var incr = 1;
+      var index = 4;
+    }
+    else {
+      var incr = -1;
+      var index = 3;
+    }
+    var moves = [];
+    var j = this.lastMove.t2.x;
+    if (j-1 >= 0) {
+      if (this.board[index][j-1].piece != null && this.board[index][j-1].piece.constructor.name == 'Pawn' && this.board[index][j-1].piece.color == color)
+        moves.push([this.board[index][j-1], this.board[index+incr][j], this.board[index][j]]);
+    }
+    if (j+1 < this.board[index].length) {
+      if (this.board[index][j+1].piece != null && this.board[index][j+1].piece.constructor.name == 'Pawn' && this.board[index][j+1].piece.color == color) {
+        moves.push([this.board[index][j+1], this.board[index+incr][j], this.board[index][j]]);
+      }
+    }
+    return moves;
+  }
+
   selectTile(e) {
     const i = 7-Math.floor(e.clientY / 100);
     const j = Math.floor(e.clientX / 100);
     var moved = false
     for (var move of this.currentMoves) {
       if (!moved && this.board[i][j] == move.t2) {
-        move.makeMove(false);
+        move.makeMove(false, true);
+        move.t1.highlight();
+        move.t2.highlight();
+        this.lastMove = move;
         var moved = true;
       }
-      move.t2.clear();
+      else
+        move.t2.clear();
     }
     this.currentMoves = [];
     if (moved)
       return;
     if (this.board[i][j].piece == null)
       return;
+    if (this.lastMove != null && this.lastMove.t1.isHighlighted()) {
+      this.lastMove.t2.clear();
+      this.lastMove.t1.clear();
+    }
     if (this.focused  == this.board[i][j]) {
       this.focused.clear();
       this.focused = null;
@@ -683,6 +764,7 @@ class Game {
     this.board = new Board(setup);
   }
 }
+
 
 var setupString = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR';
 game = new Game(setupString);
