@@ -4,7 +4,7 @@ ctx.font = '20px Arial';
 
 class Tile {
   constructor(x, y, piece) {
-    this.colors = ['#e2cfaf', '#716757', '#b6c9e4', '#707d8f'];
+    this.colors = ['#e2cfaf', '#716757', '#b4c989', '#7d8563'];
     this.dotColors = ['#c6b599', '#554d41']
     this.x = x;
     this.y = y;
@@ -510,6 +510,8 @@ class Board {
     this.moveSound = new Audio('sounds/move.mp3');
     this.castleSound = new Audio('sounds/castle.mp3')
     this.lastMove = null;
+    this.colors = ['white', 'black']
+    this.turn = 0;
     this.setupBoard(setup);
   }
 
@@ -665,6 +667,7 @@ class Board {
         move.t1.highlight();
         move.t2.highlight();
         this.lastMove = move;
+        this.turn = (this.turn+1) % 2;
         var moved = true;
       }
       else
@@ -767,4 +770,5 @@ class Game {
 
 
 var setupString = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR';
+setupString = '8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8';
 game = new Game(setupString);
