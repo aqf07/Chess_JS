@@ -90,14 +90,23 @@ class Tile {
 
 
 class Piece {
-  constructor(color, master) {
+  constructor(color, master, isPromoted=false) {
     this.color = color;
     this.master = master;
-    this.hasMoved = false;
+    this.hasMoved = 0;
+    this.isPromoted = isPromoted;
   }
 
   move() {
-    this.hasMoved = true;
+    this.hasMoved += 1;
+    if (this.isPromoted != false)
+      this.isPromoted += 1;
+  }
+
+  unmove() {
+    this.hasMoved -= 1;
+    if (this.isPromoted != false)
+      this.isPromoted -= 1;
   }
 
   getTakingMoves(i, j) {
@@ -196,8 +205,8 @@ class Pawn extends Piece {
 
 
 class Queen extends Piece {
-  constructor(color, master) {
-    super(color, master);
+  constructor(color, master, isPromoted=false) {
+    super(color, master, isPromoted);
   }
 
   getStr() {
@@ -272,7 +281,6 @@ class Bishop extends Piece {
 class Rook extends Piece {
   constructor(color, master) {
     super(color, master);
-    this.hasMoved = false;
   }
 
   getStr() {
@@ -331,7 +339,6 @@ class Knight extends Piece {
 class King extends Piece {
   constructor(color, master) {
     super(color, master);
-    this.hasMoved = false;
   }
 
   getStr() {
@@ -358,20 +365,15 @@ class Move {
     this.t2 = t2;
     this.lastPiece = this.t2.piece;
     this.master = master;
+    this.isCapture = (this.t2.piece != null)
   }
 
-  makeMove(isSimulation, sound) {
+  makeMove(isSimulation) {
     var t1 = this.t1;
     var t2 = this.t2
     var board = this.master;
     if (!isSimulation) {
       t1.piece.move();
-      if (sound) {
-        if (t2.piece != null)
-          board.captureSound.play();
-        else
-          board.moveSound.play();
-      }
     }
     if (t1.piece.color == 'white') {
       board.whitePieces.delete(t1);
@@ -398,7 +400,7 @@ class Move {
     }
   }
 
-  unmakeMove() {
+  unmakeMove(isSimulation) {
     var t1 = this.t1;
     var t2 = this.t2
     var board = this.master;
@@ -420,6 +422,13 @@ class Move {
     }
     t1.piece = t2.piece;
     t2.piece = this.lastPiece;
+    if (!isSimulation) {
+      t1.draw();
+      t2.draw();
+      t1.piece.unmove();
+      if (t1.piece.isPromoted == 0)
+        this.master.demote(t1);
+    }
   }
 }
 
@@ -434,15 +443,13 @@ class Castle extends Move {
   }
 
   makeMove(isSimulation) {
-    this.kingMove.makeMove(isSimulation, false);
-    this.rookMove.makeMove(isSimulation, false);
-    if (!isSimulation)
-      this.master.castleSound.play();
+    this.kingMove.makeMove(isSimulation);
+    this.rookMove.makeMove(isSimulation);
   }
 
-  unmakeMove() {
-    this.kingMove.unmakeMove();
-    this.rookMove.unmakeMove();
+  unmakeMove(isSimulation) {
+    this.kingMove.unmakeMove(isSimulation);
+    this.rookMove.unmakeMove(isSimulation);
   }
 }
 
@@ -453,6 +460,7 @@ class EnPassant extends Move {
     this.t3 = t3;
     this.t3Piece = t3.piece;
     this.enPassant = new Move(this.t1, this.t2, this.master);
+    this.isCapture = true;
   }
 
   makeMove(isSimulation) {
@@ -462,22 +470,23 @@ class EnPassant extends Move {
     else {
       this.master.whitePieces.delete(this.t3);
     }
-    this.enPassant.makeMove(isSimulation, false);
+    this.enPassant.makeMove(isSimulation);
     this.t3.piece = null;
     if (!isSimulation) {
-      this.master.captureSound.play();
       this.t3.draw();
     }
 
   }
 
-  unmakeMove() {
-    this.enPassant.unmakeMove();
+  unmakeMove(isSimulation) {
+    this.enPassant.unmakeMove(isSimulation);
     if (this.t3Piece.color == 'black')
       this.master.blackPieces.add(this.t3);
     else
       this.master.whitePieces.add(this.t3);
     this.t3.piece = this.t3Piece;
+    if (!isSimulation)
+      this.t3.draw();
   }
 }
 
@@ -508,7 +517,8 @@ class Board {
     }
     this.captureSound = new Audio('sounds/capture.mp3');
     this.moveSound = new Audio('sounds/move.mp3');
-    this.castleSound = new Audio('sounds/castle.mp3')
+    this.castleSound = new Audio('sounds/castle.mp3');
+    this.checkSound = new Audio('sounds/check.mp3');
     this.lastMove = null;
     this.colors = ['white', 'black']
     this.moveList = [];
@@ -550,11 +560,11 @@ class Board {
   }
 
   simulate(move)  {
-    move.makeMove(true, false);
+    move.makeMove(true);
   }
 
   callback(move) {
-    move.unmakeMove();
+    move.unmakeMove(true);
   }
 
   validKing(color) {
@@ -584,7 +594,11 @@ class Board {
   }
 
   promote(tile) {
-    tile.piece = new Queen(tile.piece.color, this);
+    tile.piece = new Queen(tile.piece.color, this, 1);
+  }
+
+  demote(tile) {
+    tile.piece = new Pawn(tile.piece.color, this);
   }
 
   checkPromotion() {
@@ -662,6 +676,17 @@ class Board {
     return moves;
   }
 
+  playSound(move) {
+    if (this.checked)
+      this.checkSound.play();
+    else if (move.isCapture)
+      this.captureSound.play();
+    else if (move.constructor.name == "Castle")
+      this.castleSound.play();
+    else
+      this.moveSound.play();
+  }
+
   movePiece(move) {
     move.makeMove(false, true);
     move.t1.highlight();
@@ -672,6 +697,7 @@ class Board {
     var moves = this.getAllMoves(this.colors[this.turn]);
     this.checked = this.inCheck(this.colors[this.turn]);
     this.forwardList = [];
+    this.playSound(move);
     if (this.checked) {
       if (this.turn == 0)
         this.whiteKing.alert();
@@ -736,9 +762,9 @@ class Board {
         this.blackKing.alert();
     }
     else {
-      if (this.whiteKing.isHighlighted())
+      if (this.whiteKing.isAlerted())
         this.whiteKing.clear();
-      if (this.blackKing.isHighlighted())
+      if (this.blackKing.isAlerted())
         this.blackKing.clear();
     }
   }
@@ -820,7 +846,7 @@ class Board {
       this.lastMove = null;
     else
       this.lastMove = this.moveList[this.moveList.length-1];
-    this.callback(move);
+    move.unmakeMove(false);
     this.getAllMoves(this.colors[this.turn]);
     move.t1.clear();
     move.t2.clear();
@@ -854,7 +880,7 @@ class Board {
     for (var move of moves) {
       this.simulate(move);
       var valid = this.validKing(color);
-      move.unmakeMove();
+      this.callback(move);
       if (valid) {
         this.movesGrid[7-move.t1.y][move.t1.x].push(move);
         tmp.push(move);
